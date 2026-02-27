@@ -1,51 +1,48 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import pandas as pd
 from io import BytesIO
 
 st.set_page_config(
-    page_title="Yuzyuze Egitim Istatistik Raporu",
+    page_title="Yüzyüze Eğitim İstatistik Raporu",
     layout="wide"
 )
 
-st.title("YUZYUZE EGITIM ISTATISTIK RAPOR UYGULAMASI")
+st.title("YÜZYÜZE EĞİTİM İSTATİSTİK RAPOR UYGULAMASI")
 
 st.markdown("""
-### Excel Dosya Formati Aciklamasi
+### Excel Dosya Formatı Açıklaması
 
-Yukleyeceginiz Excel veya CSV dosyasi tek sayfa olmali ve asagidaki sutunlari ayni isimlerle icermelidir:
+Aşağıdaki sütun isimleri birebir bulunmalıdır:
 
-- Kullanici Adi (A): Calisana ait benzersiz kod
-- Ad Soyad (B): Bilgilendirme amaclidir
-- Sirket (C):
-  SUNAR YATIRIM
-  SUNAR MISIR
-  ELITA GIDA
-  NCS GIDA
-  SUNAR UN VE YEM-OSMANIYE
-  SUNAR UN VE YEM-KONYA
-  SUNAR NP
-- Yaka Kategorisi (D):
-  BY = Beyaz Yaka
-  MY = Mavi Yaka
-- Egitim Ismi (E): Egitimin adi
-- Egitim Suresi (F): Saat cinsinden tam sayi (orn 2)
+- Kullanıcı Adı
+- Ad Soyad
+- Şirket
+- Yaka Kategorisi
+- Eğitim İsmi
+- Eğitim Süresi
 
-Ayni kisi ayni egitime birden fazla katilmissa ayri satirlar halinde yer almalidir.
+SUNAR UN VE YEM-OSMANİYE ve
+SUNAR UN VE YEM-KONYA
+otomatik olarak SUNAR UN VE YEM altında hesaplanır.
 """)
 
 uploaded_file = st.file_uploader(
-    "Excel veya CSV dosyasini yukleyin",
+    "Excel veya CSV dosyasını yükleyin",
     type=["xlsx", "csv"]
 )
 
 if uploaded_file:
+
     if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file, encoding="utf-8")
     else:
         df = pd.read_excel(uploaded_file)
 
     df.columns = df.columns.str.strip()
 
+    # Şirket normalizasyonu
     df["Şirket"] = df["Şirket"].replace({
         "SUNAR UN VE YEM-OSMANİYE": "SUNAR UN VE YEM",
         "SUNAR UN VE YEM-KONYA": "SUNAR UN VE YEM"
@@ -63,6 +60,7 @@ if uploaded_file:
     results = []
 
     for company in companies:
+
         company_df = df[df["Şirket"] == company]
 
         if company_df.empty:
@@ -82,6 +80,7 @@ if uploaded_file:
         grouped = company_df.groupby("Eğitim İsmi")
 
         for training, g in grouped:
+
             duration = g["Eğitim Süresi"].iloc[0]
             participant_count = len(g)
 
@@ -102,7 +101,7 @@ if uploaded_file:
 
     result_df = pd.DataFrame(results)
 
-    st.subheader("Egitim Bazli Detayli Tablo")
+    st.subheader("Eğitim Bazlı Detaylı Tablo")
     st.dataframe(result_df, use_container_width=True)
 
     summary_df = (
@@ -112,26 +111,28 @@ if uploaded_file:
         .reset_index()
     )
 
-    st.subheader("Sirket Bazli Toplam Ozet")
+    st.subheader("Şirket Bazlı Toplam Özet")
     st.dataframe(summary_df, use_container_width=True)
 
+    # Excel çıktısı - Detay
     detay_buffer = BytesIO()
     result_df.to_excel(detay_buffer, index=False)
     detay_buffer.seek(0)
 
     st.download_button(
-        label="Egitim Detay Tablosunu Excel Olarak Indir",
+        label="Eğitim Detay Tablosunu Excel Olarak İndir",
         data=detay_buffer,
         file_name="egitim_detay_raporu.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+    # Excel çıktısı - Özet
     ozet_buffer = BytesIO()
     summary_df.to_excel(ozet_buffer, index=False)
     ozet_buffer.seek(0)
 
     st.download_button(
-        label="Sirket Ozet Tablosunu Excel Olarak Indir",
+        label="Şirket Özet Tablosunu Excel Olarak İndir",
         data=ozet_buffer,
         file_name="sirket_ozet_raporu.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
